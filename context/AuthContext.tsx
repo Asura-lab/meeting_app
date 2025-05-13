@@ -19,10 +19,11 @@ type AuthContextType = {
   isLoading: boolean;
   isAuthenticated: boolean;
   token: string | null;
-  login: (email: string, password: string) => Promise<void>;
-  register: (userData: RegisterData) => Promise<void>;
+  login: (email: string, password: string) => Promise<any>; // Return type can be more specific
+  register: (userData: RegisterData) => Promise<any>; // Return type can be more specific
   logout: () => void;
   isEmailVerified: boolean;
+  setAuthData: (token: string, user: User) => void; // New function
 };
 
 type RegisterData = {
@@ -42,6 +43,7 @@ const AuthContext = createContext<AuthContextType>({
   register: async () => {},
   logout: () => {},
   isEmailVerified: false,
+  setAuthData: () => {}, // Default empty implementation
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -91,6 +93,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     checkUserLoggedIn();
   }, []);
 
+  const setAuthData = (newToken: string, newUser: User) => {
+    localStorage.setItem("token", newToken); // Ensure localStorage is also set here
+    setToken(newToken);
+    setUser(newUser);
+    setIsAuthenticated(true);
+    setIsEmailVerified(newUser.isEmailVerified);
+    setIsLoading(false); // Assuming user is loaded
+  };
+
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
@@ -109,12 +120,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       // Store token in both cookie and localStorage for compatibility
-      localStorage.setItem("token", data.token);
-      setToken(data.token);
-
-      setUser(data.user);
-      setIsAuthenticated(true);
-      setIsEmailVerified(data.user.isEmailVerified);
+      // localStorage.setItem("token", data.token); // Handled by setAuthData or directly
+      // setToken(data.token);
+      // setUser(data.user);
+      // setIsAuthenticated(true);
+      // setIsEmailVerified(data.user.isEmailVerified);
+      setAuthData(data.token, data.user); // Use the new function
       return data;
     } catch (error) {
       console.error("Login error:", error);
@@ -156,6 +167,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setUser(null);
     setIsAuthenticated(false);
     setIsEmailVerified(false);
+    // Optionally, clear HttpOnly cookie by calling a logout API endpoint
   };
 
   return (
@@ -169,6 +181,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         register,
         logout,
         isEmailVerified,
+        setAuthData, // Provide the new function
       }}
     >
       {children}

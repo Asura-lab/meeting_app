@@ -25,7 +25,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          message: "Please verify your email before logging in.",
+          message:
+            "Please verify your email before logging in. A code was sent to your email.",
+          actionRequired: "verifyEmail", // Add this to help frontend
+          email: user.email, // Send email back to redirect to OTP page
         },
         { status: 403 } // 403 Forbidden is appropriate here
       );

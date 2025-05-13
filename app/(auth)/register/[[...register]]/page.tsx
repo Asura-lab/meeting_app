@@ -42,19 +42,40 @@ const RegisterPage = () => {
     }
 
     try {
-      await register({
+      // The register function in AuthContext might need to be updated
+      // if it expects a full user object or token in response,
+      // as the backend now returns minimal info before verification.
+      const response = await register({
+        // Assuming register calls the API and returns parsed JSON
         username: formData.username,
         email: formData.email,
         password: formData.password,
         firstName: formData.firstName,
         lastName: formData.lastName,
       });
+
+      // Assuming 'register' in useAuth now might not log the user in directly
+      // or might return the API response directly.
+      // Adjust based on your useAuth implementation.
+
       toast.success(
-        "Registration successful. Please check your email to verify your account."
-      ); // Updated message
-      router.push("/login?message=verify-email"); // Optionally redirect with a query param
+        "Registration successful. Please check your email for a 6-digit verification code."
+      );
+      // Redirect to a new page where the user can enter the OTP
+      // Pass the email to the verification page, e.g., via query params
+      router.push(
+        `/verify-email-otp?email=${encodeURIComponent(formData.email)}`
+      ); // Example route
     } catch (error: any) {
-      toast.error(error.message || "Registration failed");
+      // Handle specific error for "User already exists, email not verified"
+      if (error.message?.includes("User already exists, email not verified")) {
+        toast.error(error.message);
+        router.push(
+          `/verify-email-otp?email=${encodeURIComponent(formData.email)}`
+        );
+      } else {
+        toast.error(error.message || "Registration failed");
+      }
     } finally {
       setIsSubmitting(false);
     }
