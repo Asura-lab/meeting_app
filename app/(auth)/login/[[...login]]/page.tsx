@@ -12,7 +12,7 @@ const LoginPage = () => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false); // Added for "Remember Me" checkbox
+  const [rememberMe, setRememberMe] = useState(false);
   const { login } = useAuth();
   const router = useRouter();
 
@@ -21,9 +21,9 @@ const LoginPage = () => {
     setIsSubmitting(true);
 
     try {
-      await login(email, password); // login function in useAuth
+      await login(email, password);
       toast.success("Login successful");
-      router.push("/"); // Or to the intended page after login
+      router.push("/");
     } catch (error: any) {
       // Check if the error indicates email verification is needed
       if (error.actionRequired === "verifyEmail" && error.email) {

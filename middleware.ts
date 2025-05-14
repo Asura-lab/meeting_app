@@ -1,6 +1,6 @@
 // middleware.ts
 import { NextRequest, NextResponse } from "next/server";
-import { verifyTokenEdge } from "./lib/jwt"; // Changed from verifyToken
+import { verifyTokenEdge } from "./lib/jwt";
 
 export async function middleware(request: NextRequest) {
   const token = request.cookies.get("token")?.value;
@@ -10,21 +10,12 @@ export async function middleware(request: NextRequest) {
   }
 
   try {
-    const payload = await verifyTokenEdge(token); // Use the new Edge-compatible function
+    const payload = await verifyTokenEdge(token);
 
     if (!payload) {
       console.log("Middleware: Invalid or expired token (Edge verification)");
       return NextResponse.redirect(new URL("/login", request.url));
     }
-
-    // Optionally, you can add the payload to headers if needed by your pages
-    // const requestHeaders = new Headers(request.headers);
-    // requestHeaders.set('x-user-id', payload.id);
-    // return NextResponse.next({
-    //   request: {
-    //     headers: requestHeaders,
-    //   },
-    // });
 
     return NextResponse.next();
   } catch (error) {
@@ -34,5 +25,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/protected/:path*"], // Add your protected routes
+  matcher: ["/protected/:path*"],
 };

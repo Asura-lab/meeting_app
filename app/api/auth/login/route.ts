@@ -64,13 +64,14 @@ export async function POST(req: NextRequest) {
         success: true,
         token,
         user: {
-          id: user._id,
+          _id: user._id,
+          id: user._id.toString(), // Add this line
           username: user.username,
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
           imageUrl: user.imageUrl,
-          isEmailVerified: user.isEmailVerified, // Include this in the response
+          isEmailVerified: user.isEmailVerified,
         },
       },
       {
