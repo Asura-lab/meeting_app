@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import Loading from "@/components/Loading";
 import TeamGanttChart from "@/components/TeamGanttChart";
 import EmailSearch from "@/components/EmailSearch"; // Add this import
+import TeamNote from "@/components/TeamNote";
 
 // Import icons for sidebar
 import { Clipboard, FileText, Users, Settings } from "lucide-react";
@@ -38,6 +39,23 @@ interface MembersResponse {
   members: Member[];
 }
 
+interface Note {
+  _id: string;
+  title: string;
+  content: string;
+  tags: string[];
+  createdBy: {
+    username: string;
+    email: string;
+  };
+  lastEditedBy: {
+    username: string;
+    email: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
 export default function TeamPage() {
   const { token, isLoading, isAuthenticated, user: currentUser } = useAuth(); // Assuming user object from useAuth has id
   const router = useRouter();
@@ -56,6 +74,11 @@ export default function TeamPage() {
     "member"
   );
   const [emailSearchKey, setEmailSearchKey] = useState(Date.now()); // Key to reset EmailSearch
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [showAddNoteModal, setShowAddNoteModal] = useState(false);
+  const [newNoteTitle, setNewNoteTitle] = useState("");
+  const [newNoteContent, setNewNoteContent] = useState("");
+  const [newNoteTags, setNewNoteTags] = useState("");
 
   // 1. fetchData only fetches the team
   const fetchData = useCallback(async () => {
@@ -114,6 +137,31 @@ export default function TeamPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Add fetchNotes function
+  const fetchNotes = useCallback(async () => {
+    if (!teamId || !token) return;
+    try {
+      const res = await fetch(`/api/teams/${teamId}/notes`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setNotes(data.notes);
+      }
+    } catch (error) {
+      console.error("Error fetching notes:", error);
+    }
+  }, [teamId, token]);
+
+  // Add useEffect for fetching notes
+  useEffect(() => {
+    if (activeTab === "notes") {
+      fetchNotes();
+    }
+  }, [activeTab, fetchNotes]);
 
   const handleAdd = async () => {
     if (!newEmail.trim() || !token) return;
@@ -262,6 +310,37 @@ export default function TeamPage() {
     }
   };
 
+  const handleAddNote = async () => {
+    if (!token || !newNoteTitle.trim() || !newNoteContent.trim()) return;
+    try {
+      const res = await fetch(`/api/teams/${teamId}/notes`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          title: newNoteTitle,
+          content: newNoteContent,
+          tags: newNoteTags
+            .split(",")
+            .map((tag) => tag.trim())
+            .filter(Boolean),
+        }),
+      });
+
+      if (res.ok) {
+        setShowAddNoteModal(false);
+        setNewNoteTitle("");
+        setNewNoteContent("");
+        setNewNoteTags("");
+        fetchNotes();
+      }
+    } catch (error) {
+      console.error("Error adding note:", error);
+    }
+  };
+
   // Render the appropriate content based on active tab
   const renderContent = () => {
     switch (activeTab) {
@@ -275,14 +354,97 @@ export default function TeamPage() {
       case "notes":
         return (
           <div className="p-6">
-            <h2 className="text-xl font-semibold mb-4">Notes</h2>
-            <p className="text-gray-500 mb-2">No notes available yet.</p>
-            {/* You can add a notes editor or list here */}
-            <textarea
-              className="w-full border rounded p-2 min-h-[120px]"
-              placeholder="Add notes for your team here (feature coming soon)..."
-              disabled
-            />
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold">Notes</h2>
+              <button
+                onClick={() => setShowAddNoteModal(true)}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Add Note
+              </button>
+            </div>
+
+            {notes.length === 0 ? (
+              <p className="text-gray-500">No notes available yet.</p>
+            ) : (
+              <div className="space-y-4">
+                {notes.map((note) => (
+                  <TeamNote
+                    key={note._id}
+                    note={note}
+                    teamId={teamId}
+                    onUpdate={fetchNotes}
+                    onDelete={fetchNotes}
+                  />
+                ))}
+              </div>
+            )}
+
+            <Dialog open={showAddNoteModal} onOpenChange={setShowAddNoteModal}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add New Note</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 p-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Title
+                    </label>
+                    <input
+                      type="text"
+                      value={newNoteTitle}
+                      onChange={(e) => setNewNoteTitle(e.target.value)}
+                      className="w-full p-2 border rounded"
+                      placeholder="Enter note title"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Content
+                    </label>
+                    <textarea
+                      value={newNoteContent}
+                      onChange={(e) => setNewNoteContent(e.target.value)}
+                      rows={4}
+                      className="w-full p-2 border rounded"
+                      placeholder="Enter note content"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Tags (comma-separated)
+                    </label>
+                    <input
+                      type="text"
+                      value={newNoteTags}
+                      onChange={(e) => setNewNoteTags(e.target.value)}
+                      className="w-full p-2 border rounded"
+                      placeholder="tag1, tag2, tag3"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <button
+                    onClick={() => {
+                      setShowAddNoteModal(false);
+                      setNewNoteTitle("");
+                      setNewNoteContent("");
+                      setNewNoteTags("");
+                    }}
+                    className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleAddNote}
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                    disabled={!newNoteTitle.trim() || !newNoteContent.trim()}
+                  >
+                    Add Note
+                  </button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         );
       case "members":
